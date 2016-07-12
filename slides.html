@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Python 3 Migration</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+      /* Slideshow styles */
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Draft2Digital Python 3 Migration
+
+---
+
+class: center, middle
+
+# Why?
+
+---
+
+class: center, middle
+
+# Reason 1 - New Features
+
+---
+
+layout: true
+
+# Feature 1: Advanced Unpacking
+
+---
+
+- You can already do this:
+
+  ```py
+  >>> a, b = range(2)
+  >>> a
+  0
+  >>> b
+  1
+  ```
+
+--
+
+- Now you can do this:
+
+  ```py
+  >>> a, b, *rest = range(10)
+  >>> a
+  0
+  >>> b
+  1
+  >>> rest
+  [2, 3, 4, 5, 6, 7, 8, 9]
+  ```
+
+---
+
+- `*rest` can go anywhere:
+
+  ```py
+  >>> a, *rest, b = range(10)
+  >>> a
+  0
+  >>> b
+  9
+  >>> rest
+  [1, 2, 3, 4, 5, 6, 7, 8]
+  ```
+
+  ```py
+  >>> *rest, b = range(10)
+  >>> rest
+  [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  >>> b
+  9
+  ```
+
+---
+
+### Get the first and last lines of a file
+
+```py
+>>> with open("using_python_to_profit") as f:
+...     first, *_, last = f.readlines()
+>>> first
+'Step 1: Use Python 3\n'
+>>> last
+'Step 10: Profit!\n'
+```
+
+---
+
+layout: true
+
+# Feature 2: Keyword only arguments
+
+---
+
+```py
+def f(a, b, *args, option=True):
+    ...
+```
+
+--
+
+- `option` comes *after* `*args`.
+
+--
+
+- The only way to access it is to explicitly call `f(a, b, option=True)`
+
+--
+
+- You can write just a `*` if you don't want to collect `*args`.
+
+  ```py
+  def f(a, b, *, option=True):
+      ...
+  ```
+
+
+---
+
+- No more, "Oops, I accidentally passed too many arguments to the function, and
+one of them was swallowed by a keyword argument".
+
+  ```py
+  def sum(a, b, biteme=False):
+      if biteme:
+          shutil.rmtree('/')
+      else:
+          return a + b
+  ```
+
+  ```py
+  >>> sum(1, 2)
+  3
+  ```
+
+  ```py
+  >>> sum(1, 2, 3)
+  ```
+
+--
+
+- Instead write
+
+  ```py
+  def sum(a, b, *, biteme=False):
+      if biteme:
+          shutil.rmtree('/')
+      else:
+          return a + b
+  ```
+
+  ```py
+  >>> sum(1, 2, 3)
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  TypeError: sum() takes 2 positional arguments but 3 were given
+  ```
+
+---
+
+### Other Cases:
+- "I reordered the keyword arguments of a function, but something was
+implicitly passing in arguments expecting the order"
+
+- You can make your APIs "future change proof".
+
+- Add new keyword arguments without breaking API.
+
+- Python 3 did this in the standard library.
+
+---
+
+layout: true
+
+# Feature 3: Chained exceptions
+
+---
+
+- Python 3 shows you the whole chain of exceptions:
+
+  ```py
+  mycopy('noway', 'noway2')
+  Traceback (most recent call last):
+    File "<stdin>", line 3, in mycopy
+    File "/Users/aaronmeurer/anaconda3/lib/python3.3/shutil.py", line 243, in copy2
+      copyfile(src, dst, follow_symlinks=follow_symlinks)
+    File "/Users/aaronmeurer/anaconda3/lib/python3.3/shutil.py", line 109, in copyfile
+      with open(src, 'rb') as fsrc:
+  PermissionError: [Errno 13] Permission denied: 'noway'
+
+  During handling of the above exception, another exception occurred:
+
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    File "<stdin>", line 5, in mycopy
+  NotImplementedError: automatic sudo injection
+  ```
+
+--
+
+- You can also do this manually using `raise from`
+
+  ```py
+  raise exception from e
+  ```
+
+  ```py
+  >>> raise NotImplementedError from OSError
+  OSError
+
+  The above exception was the direct cause of the following exception:
+
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  NotImplementedError
+  ```
+
+---
+
+layout: true
+
+# Feature 4: Fine grained `OSError` subclasses
+
+---
+
+- Python 3 fixes a lot of manual handling of different cases by adding a ton of [new exceptions](https://docs.python.org/3.4/library/exceptions.html#os-exceptions).
+
+- You can just do
+
+  ```py
+  def mycopy(source, dest):
+     try:
+         shutil.copy2(source, dest)
+     except PermissionError:
+         raise NotImplementedError("automatic sudo injection")
+  ```
+
+- (Don't worry, `PermissionError` subclasses from `OSError` and still has
+  `.errno`. Old code will still work).
+
+---
+
+layout: true
+
+# Feature 5: Everything is an iterator
+
+---
+
+- This is the hardest one to sell.
+
+- Iterators exist in Python 2 as well.
+
+- But you have to use them. Don't write `range` or `zip` or `dict.values` or
+  ....
+
+---
+
+- If you do...
+
+  ```py
+  def naivesum(N):
+      """
+      Naively sum the first N integers
+      """
+      A = 0
+      for i in range(N + 1):
+          A += i
+      return A
+  ```
+--
+
+  ```py
+  In [3]: timeit naivesum(1000000)
+  10 loops, best of 3: 61.4 ms per loop
+  ```
+--
+
+  ```py
+  In [4]: timeit naivesum(10000000)
+  1 loops, best of 3: 622 ms per loop
+  ```
+--
+
+  ```py
+  In [5]: timeit naivesum(100000000)
+  ```
+--
+
+  ```(Memory filling up...)```
+--
+
+- In Python 3, `range`, `zip`, `map`, `dict.values`, etc. are all iterators.
+
+- If you want a list, just wrap the result with `list`.
+
+- Explicit is better than implicit.
+
+- Harder to write code that accidentally uses too much memory, because the
+  input was bigger than you expected.
+
+---
+
+layout: true
+
+# Feature 6: No more comparison of everything to everything
+
+---
+
+- In Python 2, you can do
+
+  ```py
+  >>> max(['one', 2]) # One *is* the loneliest number
+  'one'
+  ```
+
+--
+
+- It's because in Python 2, you can `<` compare anything to anything.
+
+  ```py
+  >>> 'abc' > 123
+  True
+  >>> None > all
+  False
+  ```
+
+--
+
+- In Python 3, you can't do this:
+
+  ```py
+  >>> 'one' > 2
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    TypeError: unorderable types: str() > int()
+  ```
+
+- This avoids subtle bugs, e.g., from not coercing all types from int to str
+  or visa versa.
+
+- Especially when you use `>` implicitly, like with `max` or `sorted`.
+
+- In Python 2:
+
+  ```py
+  >>> sorted(['1', 2, '3'])
+  [2, '1', '3']
+  ```
+
+---
+
+layout: true
+
+# Feature 7: yield from
+
+---
+
+- Pretty great if you use generators
+
+- Instead of writing
+
+  ```py
+  for i in gen():
+      yield i
+  ```
+
+  Just write
+
+  ```py
+  yield from gen()
+  ```
+
+- Easily refactor generators into subgenerators.
+
+---
+
+- Makes it easier to turn everything into a generator. See **"Feature 5:
+  Everything is an iterator"** above for why you should do this.
+
+- Instead of accumulating a list, just `yield` or `yield from`.
+
+- **Bad**
+
+  ```py
+  def dup(n):
+      A = []
+      for i in range(n):
+          A.extend([i, i])
+      return A
+  ```
+
+  **Good**
+
+  ```py
+  def dup(n):
+      for i in range(n):
+          yield i
+          yield i
+  ```
+
+  **Better**
+
+  ```py
+  def dup(n):
+      for i in range(n):
+          yield from [i, i]
+  ```
+
+---
+
+In case you don't know, generators are awesome because:
+
+- Only one value is computed at a time. Low memory impact (see `range` example
+  above).
+
+- Can break in the middle. Don't have to compute everything just to find out
+  you needed none of it. Compute just what you need. If you often *don't* need
+  it all, you can gain a lot of performance here.
+
+- If you need a list (e.g., for slicing), just call `list()` on the generator.
+
+- Function state is "saved" between yields.
+
+- This leads to interesting possibilities, à la coroutines...
+
+---
+
+layout: true
+
+# Feature 8: asyncio
+
+---
+
+- Uses new coroutine features and saved state of generators to do
+  asynchronous IO.
+
+  ```py
+  # Taken from Guido's slides from “Tulip: Async I/O for Python 3” by Guido
+  # van Rossum, at LinkedIn, Mountain View, Jan 23, 2014
+  @coroutine
+  def fetch(host, port):
+      r,w = yield from open_connection(host,port)
+      w.write(b'GET /HTTP/1.0\r\n\r\n ')
+      while (yield from r.readline()).decode('latin-1').strip():
+          pass
+      body=yield from r.read()
+      return body
+
+  @coroutine
+  def start():
+      data = yield from fetch('python.org', 80)
+      print(data.decode('utf-8'))
+  ```
+
+
+--
+
+
+- Not going to lie to you. It will take awhile for this to be an actual pattern my brain will naturally use.
+
+---
+
+layout: true
+
+# Feature 9: Standard library additions
+
+---
+
+## `faulthandler`
+
+- Display (limited) tracebacks, even when Python dies the hard way.
+
+---
+
+## `ipaddress`
+
+- Exactly that. IP addresses.
+
+  ```py
+  >>> ipaddress.ip_address('192.168.0.1')
+  IPv4Address('192.168.0.1')
+  >>> ipaddress.ip_address('2001:db8::')
+  IPv6Address('2001:db8::')
+  ```
+
+- Just another thing we don't want to roll ourselves.
+
+---
+
+## `functools.lru_cache`
+
+- A LRU cache decorator for your functions.
+
+- From [docs](https://docs.python.org/3/whatsnew/3.2.html#functools).
+
+  ```py
+  @lru_cache(maxsize=32)
+  def get_pep(num):
+      'Retrieve text of a Python Enhancement Proposal'
+      resource = 'http://www.python.org/dev/peps/pep-%04d/' % num
+      try:
+          with urllib.request.urlopen(resource) as s:
+              return s.read()
+      except urllib.error.HTTPError:
+          return 'Not Found'
+
+  >>> for n in 8, 290, 308, 320, 8, 218, 320, 279, 289, 320, 9991:
+  ...     pep = get_pep(n)
+  ...     print(n, len(pep))
+
+  >>> get_pep.cache_info()
+  CacheInfo(hits=3, misses=8, maxsize=32, currsize=8)
+  ```
+
+---
+
+## `enum`
+
+- Finally, an enumerated type in the standard library.
+
+  ```py
+  >>> from enum import Enum
+  >>> class Color(Enum):
+  ...     red = 1
+  ...     green = 2
+  ...     blue = 3
+  ...
+  ```
+
+- Uses some magic that is only possible in Python 3 (due to metaclass
+  changes):
+
+  ```py
+  >>> class Shape(Enum):
+  ...     square = 2
+  ...     square = 3
+  ...
+  Traceback (most recent call last):
+  ...
+  TypeError: Attempted to reuse key: 'square'
+  ```
+
+---
+
+layout: true
+
+# Feature 10: Function Annotations
+
+---
+
+```py
+def f(a: stuff, b: stuff = 2) -> result:
+    ...
+```
+
+- Annotations can be arbitrary Python objects.
+
+- Python doesn't do anything with the annotations other than put them in an
+  `__annotations__` dictionary.
+
+  ```py
+  >>> def f(x: int) -> float:
+  ...     pass
+  ...
+  >>> f.__annotations__
+  {'return': <class 'float'>, 'x': <class 'int'>}
+  ```
+
+- But it leaves open the possibility for library authors to do fun things.
+
+- Example, IPython 2.0 widgets.
+- Optional Static Type Checker for Python [mypy](http://mypy-lang.org/)
+
+---
+
+layout: true
+
+# Feature 11: Unicode and bytes
+
+---
+
+- In Python 2, `str` acts like bytes of data.
+
+- There is also `unicode` type to represent Unicode strings.
+
+--
+
+- In Python 3, `str` is a *string*.
+
+- `bytes` are bytes.
+
+- There is no `unicode`. `str` strings are Unicode.
+
+--
+
+- Over my years as a Python developer, mishandling string encoding has
+  been the biggest source of major bugs making it to production.
+
+---
+
+layout: true
+
+# Feature 12: Pathlib
+
+---
+
+- In Python 2, path handling is verbose
+
+  ```py
+  import os
+
+  directory = "/etc"
+  filepath = os.path.join(directory, "test_file.txt")
+
+  if os.path.exists(filepath):
+      stuff
+  ```
+
+- In Python 3, it is much more simpler
+
+  ```py
+  from pathlib import Path
+
+  directory = Path("/etc")
+  filepath = directory / "test_file.txt"
+
+  if filepath.exists():
+      stuff
+  ```
+---
+
+layout: true
+class: center, middle
+
+---
+
+# Reason 2 - Python 2 is going Away
+
+--
+
+.footnote[And Python 3 is Stable - Now 9 Years Old!]
+
+---
+
+layout: true
+# "Gotcha" differences between 2 & 3
+
+---
+### Print Statement -> Function
+```py
+print("Hello there")
+```
+
+---
+
+### Division
+- In Python 3
+    ```py
+    5 / 2 == 2.5
+    ```
+
+- Add `from __future__ import division` to your files
+- Update any division operator as necessary to either use `//` to use floor division or continue using `/` and expect a float
+
+---
+
+### Text vs. Binary Data
+
+- Add `from __future__ import unicode_literals` to your files
+- Always prefer `io.StringIO` to `StringIO.StringIO` (or `cStringIO.StringIO`) when writing new code.
+- Be *very* careful when reading strings from files about whether you are working with textual data or binary data.
+  - **BUT**, we still have to work correctly with the libraries we use (lxml, csvkit, etc.) which often expect a Python 2 `str` type even if the data seems like text.
+  - XML is explicitly defined as a stream of bytes.
+  - **Current Recommendation** - Don't try to change the code around reading/writing data files (including xml files) if you are just in there to make bug fixes.
+
+Recommended:
+
+- Decide which of your APIs take text and which take binary data
+- Make sure that your code that works with text also works with `unicode` and code for binary data works with `bytes` in Python 2
+- Mark all binary literals with a b prefix, use a u prefix or `__future__` import statement for text literals
+- Decode binary data to text as soon as possible, encode text as binary data as late as possible
+- Open files using `io.open()` and make sure to specify the b mode when appropriate
+- Be careful when indexing binary data
+
+---
+
+# How do we make the transition?
+
+---
+
+layout: true
+
+---
+
+## There's a handy Guide!
+
+Porting Python 2 Code to Python 3: https://docs.python.org/3/howto/pyporting.html
+
+- Only worry about supporting Python 2.7
+- Learn the differences between Python 2 & 3
+- Make sure you have good test coverage ([coverage.py](https://pypi.python.org/pypi/coverage) can help; `pip install coverage`)
+- Use [Futurize](http://python-future.org/automatic_conversion.html) to update your code (`pip install future`)
+- Use [Pylint](https://pypi.python.org/pypi/pylint) to help make sure you don’t regress on your Python 3 support (pip install pylint)
+- Use [caniusepython3](https://pypi.python.org/pypi/caniusepython3) to find out which of your dependencies are blocking your use of Python 3 (pip install caniusepython3)
+- Once your dependencies are no longer blocking you, use continuous integration to make sure you stay compatible with Python 2 & 3 ([tox](https://pypi.python.org/pypi/tox) can help test against multiple versions of Python; `pip install tox`)
+
+---
+
+I ran `futurize` on our projects at Draft2Digital.
+
+```bash
+futurize -1 -n -w --no-diffs .
+```
+
+Specifying to only run **Stage 1** (safe) changes, I was able to fix the minor issues caused by the automated changes and get all tests running.
+
+It did a good job of identifying all potential division, import, list vs. iterator issues, along with changing the syntax around Exception handling.
+
+---
+
+layout: true
+
+# Example Changes made by Futurize
+
+---
+
+```python
+# Original:
+if kwargs.has_key(key):
+# converted to:
+if key in kwargs:
+```
+
+`has_key()` has been removed, and we should now use `in` instead.  Thankfully, `futurize` found those cases for me.
+
+---
+
+```python
+# Original:
+info.external_attr = 0777 << 16L
+# converted to:
+info.external_attr = 0o777 << 16
+```
+
+Python 2 would switch to long values as needed.  In Python 3, ints have been replaced by longs.
+
+Also, the syntax for octal literals has changed from a leading zero, to a leading zero followed by a lowercase 'o'.
+
+--
+
+```python
+# Original:
+bd.created = datetime(2013, 03, 01, tzinfo=distUtils.utc)
+# converted to:
+bd.created = datetime(2013, 0o3, 0o1, tzinfo=distUtils.utc)
+# which I then hand-edited to be:
+bd.created = datetime(2013, 3, 1, tzinfo=distUtils.utc)
+```
+
+Running `futurize` revealed quite a number of times where we had accidentally padded our dates with zeros.
+While that would result in the same value for all dates except on the 8<sup>th</sup> or 9<sup>th</sup>,
+it was good to find and fix them.
+
+---
+
+```python
+# Original:
+except draft2digital.validators.ValidationError, e:
+# converted to:
+except draft2digital.validators.ValidationError as e:
+```
+
+One of the most common changes in our code was in exception catching,
+where the syntax changed away from using commas to separate the Exception class
+and the exception variable.
+
+--
+
+```python
+# Original:
+raise draft2digital.validators.ValidationError, message:
+# converted to:
+raise draft2digital.validators.ValidationError(message):
+```
+
+I didn't even know this was valid syntax! I had to pull up a REPL to verify that the old syntax even worked.
+
+
+---
+
+```python
+# Original:
+print "total number of books: %s" % total_count
+# converted to:
+print("total number of books: %s" % total_count)
+
+# and added at the top of the file
+from __future__ import print_function
+```
+
+The other major change that appeared throughout the code was converting print statements to using the print function.
+
+--
+
+```python
+# Original:
+print ".",
+# converted to:
+print(".", end=' ')
+```
+
+If you need your print lines to span multiple statements, you can specify that the line ending to avoid an automatic endline being added after your print message.
+
+---
+
+```python
+# Original:
+print("value:", value)
+# converted to:
+print(("value:", value))
+```
+
+I did find a case where someone obviously was wanting to use the new print function, but hadn't added the
+future import to their file, so as a result the tuple ended up being double-wrapped in parenthesis.
+
+I just manually changed it back to the way it was.
+
+---
+
+```python
+# Original:
+import generate_full_catalog_dump
+# converted to:
+from __future__ import absolute_import
+from . import generate_full_catalog_dump
+```
+
+In Python 3 absolute imports are the norm.
+
+---
+
+Unfortunately, I wasn't so lucky when running the full run (both Stage 1 and Stage 2) due to unicode errors.
+
+- We had used `StringIO.StringIO` for both text buffers and byte buffers.
+- Due to the lack of typing in Python, looking at old code it wasn't always clear whether a particular method or function was expecting bytes or unicode.
+- We do a lot of XML processing, and XML is by definition a stream of bytes, but our strings were being converted to unicode when we added the future import for unicode literals.
+
+---
+
+# Recommendations
+- PyCharm's Compatibility Inspection (**Settings -> Inspections -> Python -> Code compatibility inspection**)
+  - Turn on both Python 2.7 and Python 3.5
+
+- Add future imports to any file you work on
+```py
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+```
+- Decorate all byte strings with the `b` prefix
+```py
+x = b"example"
+```
+- Use `io.open` instead of `open`
+```py
+data = io.open("/some/path/file.dat", mode="rb")  # returns bytestring for reading
+text = io.open("/some/text/file.txt", mode="rt")  # returns unicode for reading
+```
+- Use `io.StringIO` instead of `StringIO.StringIO`
+- Run tests to make sure you didn't break anything
+
+---
+
+layout: true
+class: center, middle
+
+---
+
+Slides were made with http://remarkjs.com/
+
+Source for slides can be found at https://github.com/okcpython/python3-slow-migration
+
+Heavily borrowed from slides found at https://github.com/asmeurer/python3-presentation
+
+</textarea>
+    <script src="https://cdn.rawgit.com/gnab/remark/gh-pages/downloads/remark-0.6.3.min.js" type="text/javascript">
+    </script>
+    <!-- Uncomment this if there is no internet -->
+
+    <!-- <script src="remark-0.6.3.min.js" type="text/javascript"> -->
+    <!--   </script> -->
+
+    <script type="text/javascript">
+      var slideshow = remark.create(      {
+        // Navigation options
+        navigation: {
+          // Enable or disable navigating using scroll
+          // Default: true
+          // Alternatives: false
+          scroll: false,
+        }
+      }
+      );
+    </script>
+  </body>
+</html>
