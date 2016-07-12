@@ -12,19 +12,35 @@
 
 class: center, middle
 
-# Draft2Digital Python 3 Migration
+# Python 3 Migration
+--
+
+## Snail Edition!
 
 ---
 
 class: center, middle
 
-# Why?
+# Why Migrate at All?
+
+---
+
+layout: true
+class: center, middle
+
+---
+
+# Reason 1 - Python 2 is going Away
+
+--
+
+### And Python 3 is Stable - Now 9 Years Old!
 
 ---
 
 class: center, middle
 
-# Reason 1 - New Features
+# Reason 2 - New Features
 
 ---
 
@@ -191,9 +207,11 @@ layout: true
   mycopy('noway', 'noway2')
   Traceback (most recent call last):
     File "<stdin>", line 3, in mycopy
-    File "/Users/aaronmeurer/anaconda3/lib/python3.3/shutil.py", line 243, in copy2
+
+    File "/lib/python3.3/shutil.py", line 243, in copy2
       copyfile(src, dst, follow_symlinks=follow_symlinks)
-    File "/Users/aaronmeurer/anaconda3/lib/python3.3/shutil.py", line 109, in copyfile
+
+    File "/lib/python3.3/shutil.py", line 109, in copyfile
       with open(src, 'rb') as fsrc:
   PermissionError: [Errno 13] Permission denied: 'noway'
 
@@ -259,7 +277,7 @@ layout: true
 
 - Iterators exist in Python 2 as well.
 
-- But you have to use them. Don't write `range` or `zip` or `dict.values` or
+- But you have to use them. Don't write '`range`' or '`zip`' or '`dict.values`' or
   ....
 
 ---
@@ -636,18 +654,6 @@ layout: true
   if filepath.exists():
       stuff
   ```
----
-
-layout: true
-class: center, middle
-
----
-
-# Reason 2 - Python 2 is going Away
-
---
-
-.footnote[And Python 3 is Stable - Now 9 Years Old!]
 
 ---
 
@@ -680,26 +686,16 @@ print("Hello there")
 - Be *very* careful when reading strings from files about whether you are working with textual data or binary data.
   - **BUT**, we still have to work correctly with the libraries we use (lxml, csvkit, etc.) which often expect a Python 2 `str` type even if the data seems like text.
   - XML is explicitly defined as a stream of bytes.
-  - **Current Recommendation** - Don't try to change the code around reading/writing data files (including xml files) if you are just in there to make bug fixes.
-
-Recommended:
-
-- Decide which of your APIs take text and which take binary data
-- Make sure that your code that works with text also works with `unicode` and code for binary data works with `bytes` in Python 2
-- Mark all binary literals with a b prefix, use a u prefix or `__future__` import statement for text literals
-- Decode binary data to text as soon as possible, encode text as binary data as late as possible
-- Open files using `io.open()` and make sure to specify the b mode when appropriate
-- Be careful when indexing binary data
-
----
-
-# How do we make the transition?
 
 ---
 
 layout: true
 
 ---
+
+# How do we make the transition?
+
+--
 
 ## There's a handy Guide!
 
@@ -855,10 +851,16 @@ Unfortunately, I wasn't so lucky when running the full run (both Stage 1 and Sta
 - We do a lot of XML processing, and XML is by definition a stream of bytes, but our strings were being converted to unicode when we added the future import for unicode literals.
 
 ---
+layout: true
 
 # Recommendations
+
+---
+
 - PyCharm's Compatibility Inspection (**Settings -> Inspections -> Python -> Code compatibility inspection**)
   - Turn on both Python 2.7 and Python 3.5
+
+---
 
 - Add future imports to any file you work on
 ```py
@@ -867,7 +869,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 ```
-- Decorate all byte strings with the `b` prefix
+
+---
+
+- Decide which of your APIs take text and which take binary data
+- Mark all binary literals with a `b` prefix, use a `u` prefix or (even better) `__future__` import statement for text literals
 ```py
 x = b"example"
 ```
@@ -876,8 +882,15 @@ x = b"example"
 data = io.open("/some/path/file.dat", mode="rb")  # returns bytestring for reading
 text = io.open("/some/text/file.txt", mode="rt")  # returns unicode for reading
 ```
-- Use `io.StringIO` instead of `StringIO.StringIO`
-- Run tests to make sure you didn't break anything
+- Use `io.StringIO` and `io.BytesIO` instead of `StringIO.StringIO`
+
+---
+
+- Update files whenever you are working on them
+  - But not around reading/writing data files (including xml files) if you are not writing something from scratch
+- When working with text, decode from binary data to text as soon as possible, encode text as binary data as late as possible
+- Run tests frequently to make sure you didn't break anything
+- Make sure that your code that works with text also works with `unicode` and code for binary data works with `bytes` in Python 2
 
 ---
 
