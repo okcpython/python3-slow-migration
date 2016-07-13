@@ -4,6 +4,9 @@
     <title>Python 3 Migration</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <style type="text/css">
+      code {
+        background-color: #f0f0f0;
+      }
       /* Slideshow styles */
     </style>
   </head>
@@ -236,8 +239,7 @@ layout: true
 
 - Iterators exist in Python 2 as well.
 
-- But you have to use them. Don't write '`range`' or '`zip`' or '`dict.values`' or
-  ....
+- But you have to use them. Don't write `range` or `zip` or `dict.values` etc.
 
 ---
 
@@ -245,7 +247,7 @@ layout: true
 
   ```py
   def naivesum(N):
-      """Naively sum the first N integers"""
+      """sum the first N integers"""
       A = 0
       for i in range(N + 1):
           A += i
@@ -422,26 +424,33 @@ layout: true
   asynchronous IO.
 
   ```py
-  # Taken from Guido's slides from "Tulip: Async I/O for Python 3" by Guido
-  # van Rossum, at LinkedIn, Mountain View, Jan 23, 2014
+  import asyncio
+  from asyncio import coroutine, open_connection
+
   @coroutine
   def fetch(host, port):
+      print("fetching")                                           # 2
       r,w = yield from open_connection(host,port)
-      w.write(b'GET /HTTP/1.0\r\n\r\n ')
+      w.write(b'GET /HTTP/1.0\r\n\r\n ')                          # 3
       while (yield from r.readline()).decode('latin-1').strip():
-          pass
-      body=yield from r.read()
+          print("skipping header")                                # 4-10
+
+      # r.read() returns generator, 'yield from r.read()' returns bytes
+      body=yield from r.read()                                    # 11
       return body
 
   @coroutine
   def start():
-      data = yield from fetch('python.org', 80)
+      print("starting")                                           # 1
+      data = yield from fetch('localhost', 80)
+      print("got data back")                                      # 12
       print(data.decode('utf-8'))
+
+  loop = asyncio.get_event_loop()
+  loop.run_until_complete(start())
+  loop.close()
   ```
-
-
 --
-
 
 - Not going to lie to you. It will take awhile for this to be an actual pattern my brain will naturally use.
 
@@ -476,7 +485,7 @@ layout: true
 
 ## `functools.lru_cache`
 
-- A LRU cache decorator for your functions.
+- An LRU cache decorator for your functions.
 
 - From [docs](https://docs.python.org/3/whatsnew/3.2.html#functools).
 
@@ -554,15 +563,46 @@ def f(a: stuff, b: stuff = 2) -> result:
   ```
 
 - But it leaves open the possibility for library authors to do fun things.
-
-- Example, IPython 2.0 widgets.
-- Optional Static Type Checker for Python [mypy](http://mypy-lang.org/)
+  - IPython 2.0 widgets
+  - Optional Static Type Checker for Python [mypy](http://mypy-lang.org/)
 
 ---
 
 layout: true
 
-# Feature 11: Unicode and bytes
+# Feature 11: Pathlib
+
+---
+
+- In Python 2, path handling is verbose
+
+  ```py
+  import os
+
+  directory = "/etc"
+  filepath = os.path.join(directory, "test_file.txt")
+
+  if os.path.exists(filepath):
+      stuff
+  ```
+
+- In Python 3, it is simpler
+
+  ```py
+  from pathlib import Path
+
+  directory = Path("/etc")
+  filepath = directory / "test_file.txt"
+
+  if filepath.exists():
+      stuff
+  ```
+
+---
+
+layout: true
+
+# Feature 12: Unicode and bytes
 
 ---
 
@@ -582,38 +622,6 @@ layout: true
 
 - Over my years as a Python developer, mishandling string encoding has
   been the biggest source of major bugs making it to production.
-
----
-
-layout: true
-
-# Feature 12: Pathlib
-
----
-
-- In Python 2, path handling is verbose
-
-  ```py
-  import os
-
-  directory = "/etc"
-  filepath = os.path.join(directory, "test_file.txt")
-
-  if os.path.exists(filepath):
-      stuff
-  ```
-
-- In Python 3, it is much more simpler
-
-  ```py
-  from pathlib import Path
-
-  directory = Path("/etc")
-  filepath = directory / "test_file.txt"
-
-  if filepath.exists():
-      stuff
-  ```
 
 ---
 
@@ -665,8 +673,8 @@ Porting Python 2 Code to Python 3: https://docs.python.org/3/howto/pyporting.htm
 - Learn the differences between Python 2 & 3
 - Make sure you have good test coverage ([coverage.py](https://pypi.python.org/pypi/coverage) can help; `pip install coverage`)
 - Use [Futurize](http://python-future.org/automatic_conversion.html) to update your code (`pip install future`)
-- Use [Pylint](https://pypi.python.org/pypi/pylint) to help make sure you don’t regress on your Python 3 support (pip install pylint)
-- Use [caniusepython3](https://pypi.python.org/pypi/caniusepython3) to find out which of your dependencies are blocking your use of Python 3 (pip install caniusepython3)
+- Use [Pylint](https://pypi.python.org/pypi/pylint) to help make sure you don’t regress on your Python 3 support (`pip install pylint`)
+- Use [caniusepython3](https://pypi.python.org/pypi/caniusepython3) to find out which of your dependencies are blocking your use of Python 3 (`pip install caniusepython3`)
 - Once your dependencies are no longer blocking you, use continuous integration to make sure you stay compatible with Python 2 & 3 ([tox](https://pypi.python.org/pypi/tox) can help test against multiple versions of Python; `pip install tox`)
 
 ---
@@ -804,11 +812,11 @@ In Python 3 absolute imports are the norm.
 
 ---
 
-Unfortunately, I wasn't so lucky when running the full run (both Stage 1 and Stage 2) due to unicode errors.
+Unfortunately, I wasn't so lucky when running the full run (both Stage 1 and Stage 2) due to Unicode errors.
 
 - We had used `StringIO.StringIO` for both text buffers and byte buffers.
-- Due to the lack of typing in Python, looking at old code it wasn't always clear whether a particular method or function was expecting bytes or unicode.
-- We do a lot of XML processing, and XML is by definition a stream of bytes, but our strings were being converted to unicode when we added the future import for unicode literals.
+- Due to the lack of typing in Python, looking at old code it wasn't always clear whether a particular method or function was expecting `bytes` or `unicode`.
+- We do a lot of XML processing, and XML is by definition a stream of bytes, but our strings were being converted to Unicode when we added the future import for Unicode literals.
 
 ---
 layout: true
@@ -840,7 +848,7 @@ x = b"example"
 - Use `io.open` instead of `open`
 ```py
 data = io.open("/some/path/file.dat", mode="rb")  # returns bytestring for reading
-text = io.open("/some/text/file.txt", mode="rt")  # returns unicode for reading
+text = io.open("/some/text/file.txt", mode="rt")  # returns Unicode for reading
 ```
 - Use `io.StringIO` and `io.BytesIO` instead of `StringIO.StringIO`
 
