@@ -12,10 +12,10 @@
 
 class: center, middle
 
-# Python 3 Migration
+# Migrating to Python 3
 --
 
-## Snail Edition!
+### (Snail Edition)
 
 ---
 
@@ -139,51 +139,12 @@ def f(a, b, *args, option=True):
       ...
   ```
 
-
----
-
-- No more, "Oops, I accidentally passed too many arguments to the function, and
-one of them was swallowed by a keyword argument".
-
-  ```py
-  def sum(a, b, biteme=False):
-      if biteme:
-          shutil.rmtree('/')
-      else:
-          return a + b
-  ```
-
-  ```py
-  >>> sum(1, 2)
-  3
-  ```
-
-  ```py
-  >>> sum(1, 2, 3)
-  ```
-
---
-
-- Instead write
-
-  ```py
-  def sum(a, b, *, biteme=False):
-      if biteme:
-          shutil.rmtree('/')
-      else:
-          return a + b
-  ```
-
-  ```py
-  >>> sum(1, 2, 3)
-  Traceback (most recent call last):
-    File "<stdin>", line 1, in <module>
-  TypeError: sum() takes 2 positional arguments but 3 were given
-  ```
-
 ---
 
 ### Other Cases:
+- "Oops, I accidentally passed too many arguments to the function, and
+one of them was swallowed by a keyword argument".
+
 - "I reordered the keyword arguments of a function, but something was
 implicitly passing in arguments expecting the order"
 
@@ -273,8 +234,6 @@ layout: true
 
 ---
 
-- This is the hardest one to sell.
-
 - Iterators exist in Python 2 as well.
 
 - But you have to use them. Don't write '`range`' or '`zip`' or '`dict.values`' or
@@ -286,9 +245,7 @@ layout: true
 
   ```py
   def naivesum(N):
-      """
-      Naively sum the first N integers
-      """
+      """Naively sum the first N integers"""
       A = 0
       for i in range(N + 1):
           A += i
@@ -318,9 +275,7 @@ layout: true
 
 - In Python 3, `range`, `zip`, `map`, `dict.values`, etc. are all iterators.
 
-- If you want a list, just wrap the result with `list`.
-
-- Explicit is better than implicit.
+- If you want a list, just wrap the result with `list` - explicit is better than implicit.
 
 - Harder to write code that accidentally uses too much memory, because the
   input was bigger than you expected.
@@ -406,32 +361,37 @@ layout: true
 
 - Instead of accumulating a list, just `yield` or `yield from`.
 
-- **Bad**
+```py
+>>> dup(3)
+[0, 0, 1, 1, 2, 2]
+```
 
-  ```py
-  def dup(n):
-      A = []
-      for i in range(n):
-          A.extend([i, i])
-      return A
-  ```
+**Bad**
 
-  **Good**
+```py
+def dup(n):
+    A = []
+    for i in range(n):
+        A.extend([i, i])
+    return A
+```
 
-  ```py
-  def dup(n):
-      for i in range(n):
-          yield i
-          yield i
-  ```
+**Good**
 
-  **Better**
+```py
+def dup(n):
+    for i in range(n):
+        yield i
+        yield i
+```
 
-  ```py
-  def dup(n):
-      for i in range(n):
-          yield from [i, i]
-  ```
+**Better**
+
+```py
+def dup(n):
+    for i in range(n):
+        yield from [i, i]
+```
 
 ---
 
@@ -462,7 +422,7 @@ layout: true
   asynchronous IO.
 
   ```py
-  # Taken from Guido's slides from “Tulip: Async I/O for Python 3” by Guido
+  # Taken from Guido's slides from "Tulip: Async I/O for Python 3" by Guido
   # van Rossum, at LinkedIn, Mountain View, Jan 23, 2014
   @coroutine
   def fetch(host, port):
@@ -887,7 +847,7 @@ text = io.open("/some/text/file.txt", mode="rt")  # returns unicode for reading
 ---
 
 - Update files whenever you are working on them
-  - But not around reading/writing data files (including xml files) if you are not writing something from scratch
+  - But not around reading/writing data files (including xml files) if you are not writing something from scratch.  Make those changes separately.
 - When working with text, decode from binary data to text as soon as possible, encode text as binary data as late as possible
 - Run tests frequently to make sure you didn't break anything
 - Make sure that your code that works with text also works with `unicode` and code for binary data works with `bytes` in Python 2
@@ -906,12 +866,10 @@ Source for slides can be found at https://github.com/okcpython/python3-slow-migr
 Heavily borrowed from slides found at https://github.com/asmeurer/python3-presentation
 
 </textarea>
-    <script src="https://cdn.rawgit.com/gnab/remark/gh-pages/downloads/remark-0.6.3.min.js" type="text/javascript">
-    </script>
+    <!--<script src="https://cdn.rawgit.com/gnab/remark/gh-pages/downloads/remark-0.6.3.min.js" type="text/javascript"></script>-->
     <!-- Uncomment this if there is no internet -->
 
-    <!-- <script src="remark-0.6.3.min.js" type="text/javascript"> -->
-    <!--   </script> -->
+    <script src="remark-0.6.3.min.js" type="text/javascript"></script>
 
     <script type="text/javascript">
       var slideshow = remark.create(      {
